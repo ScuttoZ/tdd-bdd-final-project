@@ -30,6 +30,7 @@ from decimal import Decimal
 from service.models import Product, Category, db
 from service import app
 from tests.factories import ProductFactory
+from service.models import DataValidationError
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql://postgres:postgres@localhost:5432/postgres"
@@ -101,6 +102,105 @@ class TestProductModel(unittest.TestCase):
         self.assertEqual(new_product.available, product.available)
         self.assertEqual(new_product.category, product.category)
 
-    #
-    # ADD YOUR TEST CASES HERE
-    #
+    def test_read_a_product(self):
+        product = ProductFactory()
+        product.id = None
+        product.create()
+        self.assertIsNotNone(product.id)
+        found_product = Product.find(product.id)
+        self.assertEqual(product.name, found_product.name)
+        self.assertEqual(product.description, found_product.description)
+        self.assertEqual(product.price, found_product.price)
+        self.assertEqual(product.available, found_product.available)
+        self.assertEqual(product.category, found_product.category)
+
+    def test_update_a_product(self):
+        product = ProductFactory()
+        product.id = None
+        with self.assertRaises(DataValidationError):
+            product.update()
+        product.create()
+        self.assertIsNotNone(product.id)
+        product.description = 'Test desc'
+        old_id = product.id
+        product.update()
+        prods = Product.all()
+        self.assertEqual(prods[0].id, old_id)
+        self.assertEqual(prods[0].description, 'Test desc')
+        self.assertEqual(len(prods), 1)
+
+    def test_delete_a_product(self):
+        product = ProductFactory()
+        product.id = None
+        product.create()
+        self.assertEqual(len(Product.all()), 1)
+        product.delete()
+        self.assertEqual(len(Product.all()), 0)
+
+    def test_list_all_products(self):
+        prods = Product.all()
+        self.assertEqual(len(prods), 0)
+        for i in range(5):
+            product = ProductFactory()
+            product.create()
+        self.assertEqual(len(Product.all()), 5)
+
+    def test_find_a_product_by_name(self):
+        for i in range(5):
+            product = ProductFactory()
+            product.create()
+        prods = Product.all()
+        name = prods[0].name
+        count = 0
+        for prod in prods:
+            if prod.name == name:
+                count += 1
+        found = list(Product.find_by_name(name))
+        self.assertEqual(len(found), count)
+        for prod in found:
+            self.assertEqual(prod.name, name)
+
+    def test_find_a_product_by_availability(self):
+        for i in range(10):
+            product = ProductFactory()
+            product.create()
+        prods = Product.all()
+        available = prods[0].available
+        count = 0
+        for prod in prods:
+            if prod.available == available:
+                count += 1
+        found = list(Product.find_by_availability(available))
+        self.assertEqual(len(found), count)
+        for prod in found:
+            self.assertEqual(prod.available, available)
+
+    def test_find_a_product_by_category(self):
+        for i in range(10):
+            product = ProductFactory()
+            product.create()
+        prods = Product.all()
+        category = prods[0].category
+        count = 0
+        for prod in prods:
+            if prod.category == category:
+                count += 1
+        found = list(Product.find_by_category(category))
+        self.assertEqual(len(found), count)
+        for prod in found:
+            self.assertEqual(prod.category, category)
+
+    def test_find_a_product_by_price(self):
+        for i in range(5):
+            product = ProductFactory()
+            product.create()
+        prods = Product.all()
+        price = prods[0].price
+        count = 0
+        for prod in prods:
+            if prod.price == price:
+                count += 1
+        found = list(Product.find_by_price(price))
+        self.assertEqual(len(found), count)
+        for prod in found:
+            self.assertEqual(prod.price, price)
